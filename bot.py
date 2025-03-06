@@ -67,9 +67,7 @@ def init_db():
 
     conn.close()
 
-
 def populate_initial_data(conn):
-
     cursor = conn.cursor()
 
     pediatricians = [
@@ -94,7 +92,7 @@ def populate_initial_data(conn):
     ]
 
     cursor.executemany("INSERT INTO doctors (id, name, specialty, district, room) VALUES (?, ?, ?, ?, ?)",
-                       pediatricians)
+                      pediatricians)
     cursor.executemany("INSERT INTO doctors (id, name, specialty, district, room) VALUES (?, ?, ?, ?, ?)", specialists)
 
     days = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница']
@@ -121,13 +119,11 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
-
 def get_doctor_by_specialty(specialty):
     conn = get_db_connection()
     doctors = conn.execute('SELECT * FROM doctors WHERE specialty = ?', (specialty,)).fetchall()
     conn.close()
     return doctors
-
 
 def get_doctors_by_district(district=None):
     conn = get_db_connection()
@@ -156,12 +152,10 @@ def get_available_slots(doctor_id):
     conn.close()
     return slots
 
-
 def book_appointment(user_id, doctor_id, slot_id, patient_name=None, patient_phone=None, address=None, symptoms=None):
     conn = get_db_connection()
 
     today = datetime.now()
-
     slot = conn.execute('SELECT day FROM time_slots WHERE id = ?', (slot_id,)).fetchone()
     day_of_week = slot['day']
 
@@ -209,7 +203,6 @@ def book_appointment(user_id, doctor_id, slot_id, patient_name=None, patient_pho
         'date': appointment_date_str
     }
 
-
 def get_user_appointments(user_id):
     conn = get_db_connection()
     appointments = conn.execute('''
@@ -223,13 +216,11 @@ def get_user_appointments(user_id):
     conn.close()
     return appointments
 
-
 def get_user_info(user_id):
     conn = get_db_connection()
     user = conn.execute('SELECT * FROM users WHERE user_id = ?', (user_id,)).fetchone()
     conn.close()
     return user
-
 
 def update_user_info(user_id, name=None, phone=None, address=None):
     conn = get_db_connection()
@@ -271,7 +262,9 @@ class States:
     FEVER_CHOICE = 'fever_choice'
     SPECIALIST_CHOICE = 'specialist_choice'
     PEDIATR_PURPOSE = 'pediatr_purpose'
+    SPECIALIST_PURPOSE = 'specialist_purpose'
     DISTRICT_CHOICE = 'district_choice'
+    DOCTOR_CHOICE = 'doctor_choice'
     TIME_SELECTION = 'time_selection'
     WAITING_ADDRESS = 'waiting_address'
     WAITING_NAME = 'waiting_name'
@@ -292,10 +285,16 @@ def start_command(message):
     btn4 = types.KeyboardButton("Информация о клинике")
     markup.add(btn1, btn2, btn3, btn4)
 
-    bot.send_message(message.chat.id,
-                     "Здравствуйте! Я бот для записи к необходимому врачу в детской поликлинике. "
-                     "Выберите нужный вам раздел:", reply_markup=markup)
-
+    welcome_text = """
+Здравствуйте! Я бот для записи к врачам в детской поликлинике.
+Краткая инструкция:
+1. "Запись к врачу" - для записи к педиатру или специалисту
+2. "Мои записи" - просмотр ваших записей
+3. "Мой профиль" - управление личными данными
+4. "Информация о клинике" - контакты и режим работы
+Выберите нужный раздел:
+    """
+    bot.send_message(message.chat.id, welcome_text.strip(), reply_markup=markup)
 
 @bot.message_handler(commands=['help'])
 def help_command(message):
@@ -324,16 +323,13 @@ def help_command(message):
     """
     bot.send_message(message.chat.id, help_text, parse_mode='Markdown')
 
-
 @bot.message_handler(commands=['profile'])
 def profile_command(message):
     show_profile(message)
 
-
 @bot.message_handler(commands=['appointments'])
 def appointments_command(message):
     show_appointments(message)
-
 
 @bot.message_handler(func=lambda message: message.text == "Запись к врачу")
 def start_appointment(message):
@@ -348,7 +344,6 @@ def start_appointment(message):
 
     bot.send_message(message.chat.id, "Пожалуйста, ответьте на несколько вопросов. \n"
                                       "У вас повышенная температура тела?", reply_markup=markup)
-
 
 @bot.message_handler(func=lambda message: message.text == "Мои записи")
 def show_appointments(message):
@@ -374,7 +369,6 @@ def show_appointments(message):
 
     bot.send_message(message.chat.id, result, parse_mode='Markdown', reply_markup=markup)
 
-
 @bot.message_handler(func=lambda message: message.text == "Мой профиль")
 def show_profile(message):
     user_id = message.from_user.id
@@ -383,8 +377,8 @@ def show_profile(message):
 
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
     btn1 = types.KeyboardButton("Редактировать данные")
-    btn2 = types.KeyboardButton("Назад в меню")
-    markup.add(btn1, btn2)
+    btn3 = types.KeyboardButton("Назад в меню")
+    markup.add(btn1, btn3)
 
     if user_data:
         profile_text = "*Ваш профиль:*\n\n"
@@ -400,7 +394,6 @@ def show_profile(message):
         profile_text = "Ваш профиль пока не заполнен. Вы можете добавить свои данные, нажав кнопку ниже."
 
     bot.send_message(message.chat.id, profile_text, parse_mode='Markdown', reply_markup=markup)
-
 
 @bot.message_handler(func=lambda message: message.text == "Информация о клинике")
 def clinic_info(message):
@@ -441,11 +434,9 @@ def clinic_info(message):
 
     bot.send_message(message.chat.id, info_text, parse_mode='Markdown', reply_markup=markup)
 
-
 @bot.message_handler(func=lambda message: message.text == "Назад в меню")
 def back_to_menu(message):
     start_command(message)
-
 
 @bot.message_handler(func=lambda message: message.text == "Редактировать данные")
 def edit_profile(message):
@@ -457,173 +448,76 @@ def edit_profile(message):
 
     bot.send_message(message.chat.id, "Пожалуйста, введите ваше ФИО:", reply_markup=markup)
 
-
-# Обработчики логики записи к врачу
-@bot.message_handler(func=lambda message: get_user_state(message.from_user.id) == States.FEVER_CHOICE)
-def handle_fever_choice(message):
+@bot.message_handler(func=lambda message: message.text == "Да" and get_user_state(message.from_user.id) == States.FEVER_CHOICE)
+def handle_fever_yes(message):
     user_id = message.from_user.id
-    text = message.text
-
-    if text == "Да":
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
-        btn1 = types.KeyboardButton("Самостоятельное посещение")
-        btn2 = types.KeyboardButton("Вызов врача на дом")
-        btn3 = types.KeyboardButton("Назад в меню")
-        markup.add(btn1, btn2, btn3)
-
-        bot.send_message(message.chat.id,
-                         "Вам необходимо посетить кабинет температурящих или вызвать педиатра на дом.",
-                         reply_markup=markup)
-
-    elif text == "Нет":
-        user_states[user_id] = States.SPECIALIST_CHOICE
-
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
-        btn1 = types.KeyboardButton("Педиатр")
-        btn2 = types.KeyboardButton("Узкий специалист")
-        btn3 = types.KeyboardButton("Назад в меню")
-        markup.add(btn1, btn2, btn3)
-
-        bot.send_message(message.chat.id, "Какого специалиста вам нужно посетить?", reply_markup=markup)
-
-
-@bot.message_handler(func=lambda message: message.text == "Самостоятельное посещение")
-def handle_self_visit(message):
-    user_id = message.from_user.id
-
-    # Информация о кабинете температурящих
-    info_text = "Кабинет температурящих больных находится на 1 этаже, кабинет №102 (отдельный вход). " \
-                "Время работы: с 8:00 до 19:00."
-
-    # Предложение записи к дежурному педиатру
-    markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
-    btn1 = types.KeyboardButton("Записаться к дежурному педиатру")
-    btn2 = types.KeyboardButton("Назад в меню")
-    markup.add(btn1, btn2)
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
+    btn1 = types.KeyboardButton("Самостоятельное посещение")
+    btn2 = types.KeyboardButton("Вызов врача на дом")
+    btn3 = types.KeyboardButton("Назад в меню")
+    markup.add(btn1, btn2, btn3)
 
     bot.send_message(message.chat.id,
-                     f"{info_text}\n\nВы также можете записаться к дежурному педиатру:",
+                     "Вам необходимо посетить кабинет температурящих или вызвать педиатра на дом.",
                      reply_markup=markup)
 
-
-@bot.message_handler(func=lambda message: message.text == "Записаться к дежурному педиатру")
-def handle_duty_pediatrician(message):
+@bot.message_handler(func=lambda message: message.text == "Нет" and get_user_state(message.from_user.id) == States.FEVER_CHOICE)
+def handle_fever_no(message):
     user_id = message.from_user.id
-
-    # Найти дежурного педиатра (берем первого доступного)
-    conn = get_db_connection()
-    duty_doctor = conn.execute('SELECT * FROM doctors WHERE specialty = "Педиатр" LIMIT 1').fetchone()
-    conn.close()
-
-    if not duty_doctor:
-        bot.send_message(message.chat.id,
-                         "К сожалению, дежурный педиатр сейчас недоступен. Пожалуйста, попробуйте позже.")
-        return
-
+    user_states[user_id] = States.SPECIALIST_CHOICE
     user_temp_data[user_id] = {}
-    user_temp_data[user_id]['doctor_id'] = duty_doctor['id']
-    user_temp_data[user_id]['doctor_name'] = duty_doctor['name']
-
-    # Получение доступных слотов времени для дежурного педиатра
-    slots = get_available_slots(duty_doctor['id'])
-
-    if not slots:
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
-        markup.add(types.KeyboardButton("Назад в меню"))
-
-        bot.send_message(message.chat.id,
-                         f"К сожалению, у дежурного педиатра {duty_doctor['name']} нет доступных слотов для записи. "
-                         "Пожалуйста, обратитесь в регистратуру по телефону.",
-                         reply_markup=markup)
-        return
-
-    slots_by_day = {}
-    for slot in slots:
-        day = slot['day']
-        if day not in slots_by_day:
-            slots_by_day[day] = []
-        slots_by_day[day].append(slot)
 
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
+    btn1 = types.KeyboardButton("Педиатр")
+    btn2 = types.KeyboardButton("Узкий специалист")
+    btn3 = types.KeyboardButton("Назад в меню")
+    markup.add(btn1, btn2, btn3)
 
-    days_order = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница']
+    bot.send_message(message.chat.id, "Какого специалиста вам нужно посетить?", reply_markup=markup)
 
-    for day in days_order:
-        if day in slots_by_day:
-            for slot in slots_by_day[day]:
-                markup.add(types.KeyboardButton(f"Время: {day}, {slot['time']}, ID:{slot['id']}"))
-
-    markup.add(types.KeyboardButton("Назад"))
-
-    user_states[user_id] = States.TIME_SELECTION
-
-    bot.send_message(message.chat.id,
-                     f"Выберите удобное время для приема у дежурного педиатра {duty_doctor['name']}:",
-                     reply_markup=markup)
-
-
-@bot.message_handler(func=lambda message: message.text == "Вызов врача на дом")
-def handle_house_call(message):
-    user_id = message.from_user.id
-    user_states[user_id] = States.WAITING_ADDRESS
-    user_temp_data[user_id] = {}
-
-    user_data = get_user_info(user_id)
-
-    markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
-    markup.add(types.KeyboardButton("Отмена"))
-
-    if user_data and user_data['address']:
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
-        btn_address = types.KeyboardButton(user_data['address'])
-        btn_cancel = types.KeyboardButton("Отмена")
-        markup.add(btn_address, btn_cancel)
-
-        bot.send_message(message.chat.id,
-                         f"У нас сохранен ваш адрес: {user_data['address']}.\n"
-                         "Вы можете использовать его или ввести новый адрес:",
-                         reply_markup=markup)
-    else:
-        bot.send_message(message.chat.id, "Пожалуйста, введите ваш точный адрес:", reply_markup=markup)
 @bot.message_handler(func=lambda message: message.text == "Самостоятельное посещение")
 def handle_self_visit(message):
-    markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
-    markup.add(types.KeyboardButton("Назад в меню"))
-
-    bot.send_message(message.chat.id,
-                     "Кабинет температурящих больных находится на 1 этаже, кабинет №102 (отдельный вход). "
-                     "Время работы: с 8:00 до 19:00. Запись не требуется.",
-                     reply_markup=markup)
-
+    print("Самостоятельное посещение нажато")  
+    response = """
+Вы выбрали самостоятельное посещение. Вы можете записаться к дежурному педиатру или прийти без записи.
+Информация:
+- Кабинет температурящих больных: 1 этаж, №102 (отдельный вход)
+- Время работы: 8:00-19:00
+- При себе иметь полис ОМС и паспорт
+    """
+    bot.send_message(message.chat.id, response.strip())
 
 @bot.message_handler(func=lambda message: message.text == "Вызов врача на дом")
 def handle_house_call(message):
+    print("Вызов врача на дом нажат")
     user_id = message.from_user.id
-    user_states[user_id] = States.WAITING_ADDRESS
-
     user_data = get_user_info(user_id)
 
-    markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
-    markup.add(types.KeyboardButton("Отмена"))
-
-    if user_data and user_data['address']:
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
-        btn_address = types.KeyboardButton(user_data['address'])
-        btn_cancel = types.KeyboardButton("Отмена")
-        markup.add(btn_address, btn_cancel)
-
-        bot.send_message(message.chat.id,
-                         f"У нас сохранен ваш адрес: {user_data['address']}.\n"
-                         "Вы можете использовать его или ввести новый адрес:",
-                         reply_markup=markup)
+    if user_data and user_data['full_name'] and user_data['phone'] and user_data['address']:
+        response = f"""
+Вы выбрали вызов врача на дом. Уточните контактную информацию:
+- ФИО: {user_data['full_name']}
+- Телефон: {user_data['phone']}
+- Адрес: {user_data['address']}
+Вызов принят! Врач свяжется с вами в ближайшее время для уточнения информации.
+        """
     else:
-        bot.send_message(message.chat.id, "Пожалуйста, введите ваш точный адрес:", reply_markup=markup)
-
+        response = """
+Вы выбрали вызов врача на дом. Ваш профиль не заполнен. Пожалуйста, укажите:
+- ФИО пациента
+- Номер телефона для связи
+- Адрес для вызова врача
+После заполнения данных вызов будет принят, и врач свяжется с вами в ближайшее время.
+        """
+    bot.send_message(message.chat.id, response.strip())
 
 @bot.message_handler(func=lambda message: get_user_state(message.from_user.id) == States.SPECIALIST_CHOICE)
 def handle_specialist_choice(message):
     user_id = message.from_user.id
     text = message.text
+
+    if user_id not in user_temp_data:
+        user_temp_data[user_id] = {}
 
     if text == "Педиатр":
         user_states[user_id] = States.PEDIATR_PURPOSE
@@ -639,48 +533,42 @@ def handle_specialist_choice(message):
         bot.send_message(message.chat.id, "С какой целью Вы собираетесь посетить педиатра?", reply_markup=markup)
 
     elif text == "Узкий специалист":
-        conn = get_db_connection()
-        specialists = conn.execute('''
-        SELECT DISTINCT specialty FROM doctors 
-        WHERE specialty != "Педиатр"
-        ORDER BY specialty
-        ''').fetchall()
-        conn.close()
+        user_states[user_id] = States.SPECIALIST_PURPOSE
+        user_temp_data[user_id]['specialist'] = "Узкий специалист"
 
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
+        markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
+        btn1 = types.KeyboardButton("Консультация по заболеванию")
+        btn2 = types.KeyboardButton("Повторный прием")
+        btn3 = types.KeyboardButton("Профилактический осмотр")
+        btn4 = types.KeyboardButton("Назад")
+        markup.add(btn1, btn2, btn3, btn4)
 
-        for spec in specialists:
-            markup.add(types.KeyboardButton(spec['specialty']))
-
-        markup.add(types.KeyboardButton("Назад"))
-
-        bot.send_message(message.chat.id, "Выберите необходимого специалиста:", reply_markup=markup)
-
+        bot.send_message(message.chat.id, "С какой целью Вы собираетесь посетить специалиста?", reply_markup=markup)
 
 @bot.message_handler(func=lambda message: get_user_state(message.from_user.id) == States.PEDIATR_PURPOSE)
 def handle_pediatr_purpose(message):
     user_id = message.from_user.id
     text = message.text
 
+    if user_id not in user_temp_data:
+        user_temp_data[user_id] = {}
+
     if text == "Назад":
         user_states[user_id] = States.SPECIALIST_CHOICE
-
         markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
         btn1 = types.KeyboardButton("Педиатр")
         btn2 = types.KeyboardButton("Узкий специалист")
         btn3 = types.KeyboardButton("Назад в меню")
         markup.add(btn1, btn2, btn3)
-
         bot.send_message(message.chat.id, "Какого специалиста вам нужно посетить?", reply_markup=markup)
         return
 
     if text == "Продление больничного листа":
         markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
-        markup.add(types.KeyboardButton("Вернуться к выбору врача"), types.KeyboardButton("Назад в меню"))
-
+        markup.add(types.KeyboardButton("Назад в меню"))
         bot.send_message(message.chat.id,
-                         "Для продления больничного листа можно посетить любого работающего в удобный Вам день педиатра. "
-                         "Приходите в рабочее время с 10:00 до 12:00 или с 15:00 до 17:00 без записи.",
+                         "Для продления больничного листа можно посетить любого педиатра в рабочее время "
+                         "с 10:00 до 12:00 или с 15:00 до 17:00 без записи.",
                          reply_markup=markup)
         return
 
@@ -696,31 +584,65 @@ def handle_pediatr_purpose(message):
     conn.close()
 
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=3)
-
     for district in districts:
         markup.add(types.KeyboardButton(f"Участок {district['district']}"))
-
     markup.add(types.KeyboardButton("Любой участок"))
     markup.add(types.KeyboardButton("Назад"))
 
     bot.send_message(message.chat.id, "Выберите ваш участок:", reply_markup=markup)
 
+@bot.message_handler(func=lambda message: get_user_state(message.from_user.id) == States.SPECIALIST_PURPOSE)
+def handle_specialist_purpose(message):
+    user_id = message.from_user.id
+    text = message.text
+
+    if user_id not in user_temp_data:
+        user_temp_data[user_id] = {}
+
+    if text == "Назад":
+        user_states[user_id] = States.SPECIALIST_CHOICE
+        markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
+        btn1 = types.KeyboardButton("Педиатр")
+        btn2 = types.KeyboardButton("Узкий специалист")
+        btn3 = types.KeyboardButton("Назад в меню")
+        markup.add(btn1, btn2, btn3)
+        bot.send_message(message.chat.id, "Какого специалиста вам нужно посетить?", reply_markup=markup)
+        return
+
+    user_states[user_id] = States.DOCTOR_CHOICE
+    user_temp_data[user_id]['purpose'] = text
+
+    conn = get_db_connection()
+    specialties = conn.execute('''
+    SELECT DISTINCT specialty FROM doctors 
+    WHERE specialty != "Педиатр"
+    ORDER BY specialty
+    ''').fetchall()
+    conn.close()
+
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
+    for spec in specialties:
+        markup.add(types.KeyboardButton(spec['specialty']))
+    markup.add(types.KeyboardButton("Назад"))
+
+    bot.send_message(message.chat.id, "Выберите нужного специалиста:", reply_markup=markup)
 
 @bot.message_handler(func=lambda message: get_user_state(message.from_user.id) == States.DISTRICT_CHOICE)
 def handle_district_choice(message):
     user_id = message.from_user.id
     text = message.text
 
+    if user_id not in user_temp_data:
+        user_temp_data[user_id] = {}
+
     if text == "Назад":
         user_states[user_id] = States.PEDIATR_PURPOSE
-
         markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
         btn1 = types.KeyboardButton("Первичное обращение по заболеванию")
         btn2 = types.KeyboardButton("Продление больничного листа")
         btn3 = types.KeyboardButton("Профилактический осмотр")
         btn4 = types.KeyboardButton("Назад")
         markup.add(btn1, btn2, btn3, btn4)
-
         bot.send_message(message.chat.id, "С какой целью Вы собираетесь посетить педиатра?", reply_markup=markup)
         return
 
@@ -736,47 +658,93 @@ def handle_district_choice(message):
         return
 
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
-
     for doctor in doctors:
         markup.add(types.KeyboardButton(f"{doctor['name']} - Участок {doctor['district'] or 'Не указан'}"))
-
     markup.add(types.KeyboardButton("Назад"))
 
     user_states[user_id] = States.TIME_SELECTION
     bot.send_message(message.chat.id, "Выберите врача:", reply_markup=markup)
 
-
-@bot.message_handler(
-    func=lambda message: get_user_state(message.from_user.id) == States.TIME_SELECTION and message.text == "Назад")
-def back_to_district(message):
+@bot.message_handler(func=lambda message: get_user_state(message.from_user.id) == States.DOCTOR_CHOICE)
+def handle_specialist_doctor_choice(message):
     user_id = message.from_user.id
-    user_states[user_id] = States.DISTRICT_CHOICE
+    text = message.text
 
-    conn = get_db_connection()
-    districts = conn.execute('''
+    if user_id not in user_temp_data:
+        user_temp_data[user_id] = {}
+
+    if text == "Назад":
+        user_states[user_id] = States.SPECIALIST_PURPOSE
+        markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
+        btn1 = types.KeyboardButton("Консультация по заболеванию")
+        btn2 = types.KeyboardButton("Повторный прием")
+        btn3 = types.KeyboardButton("Профилактический осмотр")
+        btn4 = types.KeyboardButton("Назад")
+        markup.add(btn1, btn2, btn3, btn4)
+        bot.send_message(message.chat.id, "С какой целью Вы собираетесь посетить специалиста?", reply_markup=markup)
+        return
+
+    doctors = get_doctor_by_specialty(text)
+
+    if not doctors:
+        bot.send_message(message.chat.id,
+                         "К сожалению, такого специалиста нет в нашей базе. Попробуйте выбрать другого.")
+        return
+
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
+    for doctor in doctors:
+        markup.add(types.KeyboardButton(f"{doctor['name']} - {doctor['specialty']}"))
+    markup.add(types.KeyboardButton("Назад"))
+
+    user_states[user_id] = States.TIME_SELECTION
+    user_temp_data[user_id]['specialty'] = text
+    bot.send_message(message.chat.id, "Выберите врача:", reply_markup=markup)
+
+@bot.message_handler(func=lambda message: get_user_state(message.from_user.id) == States.TIME_SELECTION and message.text == "Назад")
+def back_from_time_selection(message):
+    user_id = message.from_user.id
+    if user_id not in user_temp_data:
+        user_temp_data[user_id] = {}
+
+    if user_temp_data[user_id].get('specialist') == "Педиатр":
+        user_states[user_id] = States.DISTRICT_CHOICE
+        conn = get_db_connection()
+        districts = conn.execute('''
         SELECT DISTINCT district FROM doctors 
         WHERE specialty = "Педиатр" AND district IS NOT NULL
         ORDER BY district
         ''').fetchall()
-    conn.close()
+        conn.close()
 
-    markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=3)
+        markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=3)
+        for district in districts:
+            markup.add(types.KeyboardButton(f"Участок {district['district']}"))
+        markup.add(types.KeyboardButton("Любой участок"))
+        markup.add(types.KeyboardButton("Назад"))
+        bot.send_message(message.chat.id, "Выберите ваш участок:", reply_markup=markup)
+    else:
+        user_states[user_id] = States.DOCTOR_CHOICE
+        conn = get_db_connection()
+        specialties = conn.execute('''
+        SELECT DISTINCT specialty FROM doctors 
+        WHERE specialty != "Педиатр"
+        ORDER BY specialty
+        ''').fetchall()
+        conn.close()
 
-    for district in districts:
-        markup.add(types.KeyboardButton(f"Участок {district['district']}"))
+        markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
+        for spec in specialties:
+            markup.add(types.KeyboardButton(spec['specialty']))
+        markup.add(types.KeyboardButton("Назад"))
+        bot.send_message(message.chat.id, "Выберите нужного специалиста:", reply_markup=markup)
 
-    markup.add(types.KeyboardButton("Любой участок"))
-    markup.add(types.KeyboardButton("Назад"))
-
-    bot.send_message(message.chat.id, "Выберите ваш участок:", reply_markup=markup)
-
-
-@bot.message_handler(
-    func=lambda message: get_user_state(message.from_user.id) == States.TIME_SELECTION and not message.text.startswith(
-        "Время:"))
+@bot.message_handler(func=lambda message: get_user_state(message.from_user.id) == States.TIME_SELECTION and not message.text.startswith("Время:"))
 def handle_doctor_selection(message):
     user_id = message.from_user.id
     text = message.text
+
+    if user_id not in user_temp_data:
+        user_temp_data[user_id] = {}
 
     doctor_name = text.split(" - ")[0]
 
@@ -796,7 +764,6 @@ def handle_doctor_selection(message):
     if not slots:
         markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
         markup.add(types.KeyboardButton("Назад"))
-
         bot.send_message(message.chat.id,
                          f"К сожалению, у {doctor['name']} нет доступных слотов для записи. "
                          "Пожалуйста, выберите другого врача.",
@@ -811,30 +778,26 @@ def handle_doctor_selection(message):
         slots_by_day[day].append(slot)
 
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
-
     days_order = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница']
-
     for day in days_order:
         if day in slots_by_day:
             for slot in slots_by_day[day]:
                 markup.add(types.KeyboardButton(f"Время: {day}, {slot['time']}, ID:{slot['id']}"))
-
     markup.add(types.KeyboardButton("Назад"))
 
     bot.send_message(message.chat.id,
                      f"Выберите удобное время для приема у врача {doctor['name']} ({doctor['specialty']}):",
                      reply_markup=markup)
 
-
-@bot.message_handler(
-    func=lambda message: get_user_state(message.from_user.id) == States.TIME_SELECTION and message.text.startswith(
-        "Время:"))
+@bot.message_handler(func=lambda message: get_user_state(message.from_user.id) == States.TIME_SELECTION and message.text.startswith("Время:"))
 def handle_time_selection(message):
     user_id = message.from_user.id
     text = message.text
 
-    slot_id = int(text.split("ID:")[1])
+    if user_id not in user_temp_data:
+        user_temp_data[user_id] = {}
 
+    slot_id = int(text.split("ID:")[1])
     user_temp_data[user_id]['slot_id'] = slot_id
 
     user_data = get_user_info(user_id)
@@ -843,17 +806,17 @@ def handle_time_selection(message):
         confirm_appointment(message.chat.id, user_id, user_data['full_name'], user_data['phone'])
     else:
         user_states[user_id] = States.WAITING_NAME
-
         markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
         markup.add(types.KeyboardButton("Отмена"))
-
         bot.send_message(message.chat.id, "Пожалуйста, введите ФИО пациента:", reply_markup=markup)
-
 
 @bot.message_handler(func=lambda message: get_user_state(message.from_user.id) == States.WAITING_NAME)
 def handle_name_input(message):
     user_id = message.from_user.id
     text = message.text
+
+    if user_id not in user_temp_data:
+        user_temp_data[user_id] = {}
 
     if text == "Отмена":
         start_command(message)
@@ -867,11 +830,13 @@ def handle_name_input(message):
 
     bot.send_message(message.chat.id, "Пожалуйста, введите номер телефона для связи:", reply_markup=markup)
 
-
 @bot.message_handler(func=lambda message: get_user_state(message.from_user.id) == States.WAITING_PHONE)
 def handle_phone_input(message):
     user_id = message.from_user.id
     text = message.text
+
+    if user_id not in user_temp_data:
+        user_temp_data[user_id] = {}
 
     if text == "Отмена":
         start_command(message)
@@ -879,100 +844,97 @@ def handle_phone_input(message):
 
     user_temp_data[user_id]['patient_phone'] = text
 
-    if user_temp_data[user_id].get('specialist') in ["Педиатр", None] and user_temp_data[user_id].get(
-            'purpose') == "Первичное обращение по заболеванию":
+    if user_temp_data[user_id].get('purpose') in ["Первичное обращение по заболеванию", "Консультация по заболеванию"]:
         user_states[user_id] = States.WAITING_SYMPTOMS
-
         markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
         markup.add(types.KeyboardButton("Отмена"))
-
         bot.send_message(message.chat.id, "Кратко опишите симптомы заболевания:", reply_markup=markup)
     else:
         confirm_appointment(message.chat.id, user_id, user_temp_data[user_id]['patient_name'],
                             user_temp_data[user_id]['patient_phone'])
-
 
 @bot.message_handler(func=lambda message: get_user_state(message.from_user.id) == States.WAITING_SYMPTOMS)
 def handle_symptoms_input(message):
     user_id = message.from_user.id
     text = message.text
 
+    if user_id not in user_temp_data:
+        user_temp_data[user_id] = {}
+
     if text == "Отмена":
         start_command(message)
         return
 
     user_temp_data[user_id]['symptoms'] = text
-
     confirm_appointment(message.chat.id, user_id, user_temp_data[user_id]['patient_name'],
                         user_temp_data[user_id]['patient_phone'], symptoms=text)
-
 
 @bot.message_handler(func=lambda message: get_user_state(message.from_user.id) == States.WAITING_ADDRESS)
 def handle_address_input(message):
     user_id = message.from_user.id
     text = message.text
 
+    if user_id not in user_temp_data:
+        user_temp_data[user_id] = {}
+
     if text == "Отмена":
         start_command(message)
         return
 
     update_user_info(user_id, address=text)
-
     user_data = get_user_info(user_id)
 
     if user_data and user_data['full_name'] and user_data['phone']:
         confirm_house_call(message.chat.id, user_id, user_data['full_name'], user_data['phone'], text)
     else:
         user_states[user_id] = States.WAITING_NAME
-
         markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
         markup.add(types.KeyboardButton("Отмена"))
-
         bot.send_message(message.chat.id, "Пожалуйста, введите ФИО пациента:", reply_markup=markup)
-
 
 @bot.message_handler(func=lambda message: get_user_state(message.from_user.id) == States.EDIT_PROFILE)
 def handle_edit_name(message):
     user_id = message.from_user.id
     text = message.text
 
+    if user_id not in user_temp_data:
+        user_temp_data[user_id] = {}
+
     if text == "Отмена":
         show_profile(message)
         return
 
-    user_temp_data[user_id] = {'name': text}
-
+    user_temp_data[user_id]['name'] = text
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
     markup.add(types.KeyboardButton("Отмена"))
-
     bot.send_message(message.chat.id, "Введите ваш номер телефона:", reply_markup=markup)
-
     user_states[user_id] = 'edit_phone'
-
 
 @bot.message_handler(func=lambda message: get_user_state(message.from_user.id) == 'edit_phone')
 def handle_edit_phone(message):
     user_id = message.from_user.id
     text = message.text
 
+    if user_id not in user_temp_data:
+        user_temp_data[user_id] = {}
+
     if text == "Отмена":
         show_profile(message)
         return
 
     user_temp_data[user_id]['phone'] = text
-
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
     markup.add(types.KeyboardButton("Отмена"))
-
     bot.send_message(message.chat.id, "Введите ваш адрес:", reply_markup=markup)
-
     user_states[user_id] = 'edit_address'
-
 
 @bot.message_handler(func=lambda message: get_user_state(message.from_user.id) == 'edit_address')
 def handle_edit_address(message):
     user_id = message.from_user.id
     text = message.text
+
+    if user_id not in user_temp_data:
+        user_temp_data[user_id] = {}
 
     if text == "Отмена":
         show_profile(message)
@@ -984,16 +946,16 @@ def handle_edit_address(message):
         phone=user_temp_data[user_id]['phone'],
         address=text
     )
-
     bot.send_message(message.chat.id, "Ваш профиль успешно обновлен!")
-
     show_profile(message)
 
 def get_user_state(user_id):
     return user_states.get(user_id, States.START)
 
-
 def confirm_appointment(chat_id, user_id, patient_name, patient_phone, symptoms=None):
+    if user_id not in user_temp_data:
+        user_temp_data[user_id] = {}
+
     doctor_id = user_temp_data[user_id]['doctor_id']
     slot_id = user_temp_data[user_id]['slot_id']
 
@@ -1025,12 +987,13 @@ def confirm_appointment(chat_id, user_id, patient_name, patient_phone, symptoms=
 
     bot.send_message(chat_id, message, parse_mode='Markdown', reply_markup=markup)
 
-
 def confirm_house_call(chat_id, user_id, patient_name, patient_phone, address):
+    if user_id not in user_temp_data:
+        user_temp_data[user_id] = {}
+
     update_user_info(user_id, name=patient_name, phone=patient_phone, address=address)
 
     current_time = datetime.now().strftime('%d.%m.%Y %H:%M')
-
     message = f"*Вызов врача на дом успешно оформлен*\n\n"
     message += f"👤 Пациент: {patient_name}\n"
     message += f"📱 Телефон: {patient_phone}\n"
@@ -1045,15 +1008,8 @@ def confirm_house_call(chat_id, user_id, patient_name, patient_phone, address):
 
 @bot.message_handler(func=lambda message: True)
 def default_handler(message):
-    if message.from_user.id in user_states and user_states[message.from_user.id] in [States.EDIT_PROFILE, 'edit_phone',
-                                                                                     'edit_address']:
+    if message.from_user.id in user_states and user_states[message.from_user.id] in [States.EDIT_PROFILE, 'edit_phone', 'edit_address', States.WAITING_NAME, States.WAITING_PHONE, States.WAITING_ADDRESS, States.WAITING_SYMPTOMS]:
         return
-
-    if message.from_user.id in user_states and user_states[message.from_user.id] in [
-        States.WAITING_NAME, States.WAITING_PHONE, States.WAITING_ADDRESS, States.WAITING_SYMPTOMS
-    ]:
-        return
-
     start_command(message)
 
 if __name__ == '__main__':
