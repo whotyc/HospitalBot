@@ -8,7 +8,7 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-TOKEN = '6944366672:AAFEpkBSvudtB7Tij5Se7bn2-SpSrUmV9Zc'
+TOKEN = ''
 bot = telebot.TeleBot(TOKEN)
 
 
