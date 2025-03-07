@@ -16,7 +16,6 @@ def init_db():
     conn = sqlite3.connect('appointment_db.sqlite')
     cursor = conn.cursor()
 
-    # Создание таблицы doctors
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS doctors (
         id INTEGER PRIMARY KEY,
@@ -28,7 +27,6 @@ def init_db():
     ''')
     logger.info("Table 'doctors' created or already exists")
 
-    # Создание таблицы time_slots
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS time_slots (
         id INTEGER PRIMARY KEY,
@@ -41,7 +39,6 @@ def init_db():
     ''')
     logger.info("Table 'time_slots' created or already exists")
 
-    # Создание таблицы appointments
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS appointments (
         id INTEGER PRIMARY KEY,
@@ -60,7 +57,6 @@ def init_db():
     ''')
     logger.info("Table 'appointments' created or already exists")
 
-    # Создание таблицы users
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS users (
         user_id INTEGER PRIMARY KEY,
@@ -72,7 +68,6 @@ def init_db():
     ''')
     logger.info("Table 'users' created or already exists")
 
-    # Создание таблицы house_calls
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS house_calls (
         id INTEGER PRIMARY KEY,
@@ -452,7 +447,7 @@ def show_appointments(message):
     if house_calls:
         result += "*Вызовы врача на дом:*\n\n"
         for call in house_calls:
-            created_at = datetime.strptime(call['created_at'], '%Y-%m-%d %H:%M:%S')  # Исправлен формат
+            created_at = datetime.strptime(call['created_at'], '%Y-%m-%d %H:%M:%S')
             created_at_str = created_at.strftime('%d.%m.%Y %H:%M')
 
             result += f"🕒 *Оформлен: {created_at_str}*\n"
@@ -545,15 +540,13 @@ def edit_profile(message):
 
     bot.send_message(message.chat.id, "Пожалуйста, введите ваше ФИО:", reply_markup=markup)
 
-
-# Обработчики логики записи к врачу
 @bot.message_handler(func=lambda message: get_user_state(message.from_user.id) == States.FEVER_CHOICE)
 def handle_fever_choice(message):
     user_id = message.from_user.id
     text = message.text
 
     if text == "Да":
-        user_states[user_id] = 'temperature_choice'  # Новое состояние для выбора
+        user_states[user_id] = 'temperature_choice'
         markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
         btn1 = types.KeyboardButton("Самостоятельное посещение")
         btn2 = types.KeyboardButton("Вызов врача на дом")
@@ -580,7 +573,6 @@ def handle_fever_choice(message):
 @bot.message_handler(func=lambda message: message.text == "Самостоятельное посещение")
 def handle_self_visit(message):
     user_id = message.from_user.id
-    # Сбрасываем состояние и временные данные после завершения
     if user_id in user_states:
         del user_states[user_id]
     if user_id in user_temp_data:
